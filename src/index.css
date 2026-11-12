@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --bg-app: #101216;
+    --bg-surface: #181a20;
+    --bg-elevated: #20232b;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: #f3f4f6;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(34, 197, 94, 0.4) #101216;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #101216;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(34, 197, 94, 0.35);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 197, 94, 0.65);
+  }
+}
+
+/* Custom scrollbars for category chips and scroll containers */
+.scrollbar-thin-green {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 197, 94, 0.4) #101216;
+}
+
+.scrollbar-thin-green::-webkit-scrollbar {
+  height: 5px;
+}
+
+.scrollbar-thin-green::-webkit-scrollbar-track {
+  background: #101216;
+  border-radius: 9999px;
+}
+
+.scrollbar-thin-green::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.35);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin-green::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.65);
+}
+
+/* Smooth Tab Entry Transitions */
+.tab-content-enter {
+  animation: tabFadeSlideIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes tabFadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modal Animations */
+.modal-backdrop-anim {
+  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-content-anim {
+  animation: modalScaleIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Native View Transitions API support */
+::view-transition-old(root) {
+  animation: vtFadeOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+::view-transition-new(root) {
+  animation: vtFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vtFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.995); }
+}
+
+@keyframes vtFadeIn {
+  from { opacity: 0; transform: scale(0.995); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Respect user preferences for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  .tab-content-enter,
+  .modal-backdrop-anim,
+  .modal-content-anim {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Water Bottle Wave */
+@keyframes waterWave {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-25%); }
+  100% { transform: translateX(0); }
+}
+
+.water-waves {
+  position: absolute;
+  top: -8px;
+  left: 0;
+  width: 200%;
+  height: 16px;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 60%);
+  animation: waterWave 3.5s infinite linear;
+}

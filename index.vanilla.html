@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitPulse - Diário Fitness & Nutrição Inteligente</title>
+  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <span class="logo-icon">⚡</span>
+          <div class="brand-text">
+            <h1>FitPulse</h1>
+            <span class="tagline">Seu Diário Fitness Pessoal</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <div class="date-navigator">
+          <button type="button" id="btn-prev-day" class="icon-btn" aria-label="Dia anterior">◀</button>
+          <div class="current-date-badge">
+            <span id="display-date-label">Hoje</span>
+            <input type="date" id="date-picker-input" aria-label="Selecionar data">
+          </div>
+          <button type="button" id="btn-next-day" class="icon-btn" aria-label="Próximo dia">▶</button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button type="button" id="btn-open-settings" class="settings-btn" aria-label="Configurações e Metas">
+          ⚙️ <span class="hide-mobile">Metas</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Water Reminder Live Banner Alert -->
+    <aside id="water-alert-banner" class="water-alert-banner hidden" role="alert" aria-live="assertive">
+      <div class="alert-content">
+        <span class="alert-icon">💧</span>
+        <div>
+          <strong>Hora de se hidratar!</strong>
+          <p>Beba pelo menos 250ml de água agora para manter seu metabolismo ativo.</p>
+        </div>
+      </div>
+      <div class="alert-actions">
+        <button type="button" id="btn-quick-water-ack" class="btn btn-sm btn-cyan">+250ml Bebidos!</button>
+        <button type="button" id="btn-dismiss-alert" class="btn-text-close" aria-label="Dispensar aviso">✕</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Tabs Container -->
+    <main class="main-content">
+      
+      <!-- TAB 1: DASHBOARD / HOJE -->
+      <section id="tab-dashboard" class="tab-panel active" aria-labelledby="nav-tab-dashboard">
+        
+        <!-- Welcome & Fast Stats -->
+        <div class="dashboard-hero">
+          <!-- Calorie Card -->
+          <article class="metric-card calorie-card">
+            <div class="card-header-row">
+              <span class="metric-title">🔥 Balanço Calórico</span>
+              <span id="calorie-goal-tag" class="badge">Meta: 2000 kcal</span>
+            </div>
+            
+            <div class="calorie-main-display">
+              <div class="calorie-number">
+                <span id="dash-calories-consumed" class="val-big">0</span>
+                <span class="val-unit">kcal consumidas</span>
+              </div>
+              <div class="calorie-remaining">
+                <span id="dash-calories-remaining" class="val-medium">2000</span>
+                <span class="val-sub">restantes</span>
+              </div>
+            </div>
+
+            <!-- Calorie Progress Bar -->
+            <div class="progress-track" role="progressbar" id="calorie-progress-bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div id="calorie-progress-fill" class="progress-fill emerald" style="width: 0%"></div>
+            </div>
+
+            <!-- Macros Split -->
+            <div class="macros-grid">
+              <div class="macro-item macro-protein">
+                <div class="macro-header">
+                  <span class="macro-dot"></span>
+                  <span class="macro-name">Proteína</span>
+                </div>
+                <div class="macro-val"><strong id="dash-protein-total">0</strong> <small>/ <span id="dash-protein-goal">150</span>g</small></div>
+                <div class="mini-progress"><div id="bar-protein" class="fill" style="width: 0%"></div></div>
+              </div>
+
+              <div class="macro-item macro-carbs">
+                <div class="macro-header">
+                  <span class="macro-dot"></span>
+                  <span class="macro-name">Carboidratos</span>
+                </div>
+                <div class="macro-val"><strong id="dash-carbs-total">0</strong> <small>/ <span id="dash-carbs-goal">200</span>g</small></div>
+                <div class="mini-progress"><div id="bar-carbs" class="fill" style="width: 0%"></div></div>
+              </div>
+
+              <div class="macro-item macro-fat">
+                <div class="macro-header">
+                  <span class="macro-dot"></span>
+                  <span class="macro-name">Gorduras</span>
+                </div>
+                <div class="macro-val"><strong id="dash-fat-total">0</strong> <small>/ <span id="dash-fat-goal">60</span>g</small></div>
+                <div class="mini-progress"><div id="bar-fat" class="fill" style="width: 0%"></div></div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Quick Water Snapshot Card -->
+          <article class="metric-card water-card-compact">
+            <div class="card-header-row">
+              <span class="metric-title">💧 Hidratação Rápida</span>
+              <button type="button" class="link-btn" id="btn-goto-water">Ver detalhes ➔</button>
+            </div>
+            
+            <div class="water-compact-content">
+              <div class="water-level-ring">
+                <span id="dash-water-total" class="water-ring-num">0</span>
+                <span class="water-ring-unit">ml</span>
+              </div>
+              <div class="water-quick-buttons">
+                <button type="button" class="btn-water-quick" data-amount="200">+200ml</button>
+                <button type="button" class="btn-water-quick" data-amount="300">+300ml</button>
+                <button type="button" class="btn-water-quick" data-amount="500">+500ml</button>
+              </div>
+            </div>
+            <div class="water-status-label">
+              Meta: <strong id="dash-water-goal-label">2500ml</strong> • <span id="dash-water-percent">0%</span>
+            </div>
+          </article>
+
+          <!-- Quick Workout Card -->
+          <article class="metric-card workout-card-compact">
+            <div class="card-header-row">
+              <span class="metric-title">🏋️ Treino de Hoje</span>
+              <button type="button" class="link-btn" id="btn-goto-workout">Gerenciar ➔</button>
+            </div>
+            <div id="dash-workout-preview" class="dash-workout-preview">
+              <p class="empty-hint">Nenhum treino registrado hoje ainda.</p>
+              <button type="button" class="btn btn-outline-primary btn-sm" id="btn-dash-add-workout">+ Registrar Treino</button>
+            </div>
+          </article>
+        </div>
+
+        <!-- Meals Summary in Dashboard -->
+        <section class="section-card">
+          <div class="section-header">
+            <h3>🍽️ Refeições do Dia</h3>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-quick-log-meal">
+              + Registrar Alimento
+            </button>
+          </div>
+          <div id="dashboard-meals-accordion" class="meals-accordion">
+            <!-- Dynamic meal slots rendered via JS -->
+          </div>
+        </section>
+
+      </section>
+
+      <!-- TAB 2: REFEIÇÕES DETALHADAS -->
+      <section id="tab-meals" class="tab-panel" aria-labelledby="nav-tab-meals">
+        <div class="panel-header">
+          <div>
+            <h2>Diário Alimentar</h2>
+            <p class="subtitle">Registre suas refeições e deixe a IA/Banco calcular automaticamente calorias e macros.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-open-log-meal-tab">
+            + Adicionar Alimento
+          </button>
+        </div>
+
+        <div class="meals-container" id="detailed-meals-list">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- TAB 3: BANCO DE ALIMENTOS OFICIAL -->
+      <section id="tab-food-db" class="tab-panel" aria-labelledby="nav-tab-food-db">
+        <div class="panel-header">
+          <div>
+            <h2>Banco Oficial de Alimentos</h2>
+            <p class="subtitle">Base científica oficial da TACO (UNICAMP 4ª Edição) com 600+ alimentos analisados em laboratório.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-open-create-food">
+            + Novo Alimento
+          </button>
+        </div>
+
+        <!-- Official Scientific Source Banner -->
+        <aside class="official-source-banner">
+          <div class="source-banner-left">
+            <span class="source-icon">🔬</span>
+            <div>
+              <strong>Tabela Brasileira de Composição de Alimentos — TACO / UNICAMP</strong>
+              <p>Referência nacional em nutrição elaborada pelo NEPA/UNICAMP e ANVISA. Valores oficiais por 100g/100ml.</p>
+            </div>
+          </div>
+          <span class="source-stats-badge" id="food-count-badge">643 Alimentos & Receitas</span>
+        </aside>
+
+        <!-- Quick Frequent Searches Chips -->
+        <div class="quick-chips-row" aria-label="Atalhos de busca rápida">
+          <span class="chips-label">Atalhos Populares:</span>
+          <button type="button" class="quick-chip" data-search="pao com ovo">🍳 Pão com Ovo</button>
+          <button type="button" class="quick-chip" data-search="pudim">🍮 Pudim</button>
+          <button type="button" class="quick-chip" data-search="shake whey">🥤 Shake de Whey</button>
+          <button type="button" class="quick-chip" data-search="iogurte">🥣 Iogurte c/ Granola</button>
+          <button type="button" class="quick-chip" data-search="crepioca">🥞 Crepioca</button>
+          <button type="button" class="quick-chip" data-search="prato feito">🥘 Prato Feito (PF)</button>
+          <button type="button" class="quick-chip" data-search="strogonoff">🍲 Strogonoff</button>
+          <button type="button" class="quick-chip" data-search="misto quente">🥪 Misto Quente</button>
+          <button type="button" class="quick-chip" data-search="tapioca">🥟 Tapioca</button>
+          <button type="button" class="quick-chip" data-search="frango">🍗 Frango</button>
+          <button type="button" class="quick-chip" data-search="arroz">🍚 Arroz</button>
+          <button type="button" class="quick-chip" data-search="ovo">🥚 Ovo</button>
+          <button type="button" class="quick-chip" data-search="feijao">🫘 Feijão</button>
+          <button type="button" class="quick-chip" data-search="banana">🍌 Banana</button>
+          <button type="button" class="quick-chip" data-search="aveia">🌾 Aveia</button>
+          <button type="button" class="quick-chip" data-search="acai">🫐 Açaí</button>
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="search-filter-bar">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="search" id="food-search-input" placeholder="Buscar prato ou alimento (ex: pão com ovo, pudim, whey, strogonoff, frango...)" autocomplete="off">
+          </div>
+          <div class="filter-pills" role="radiogroup" aria-label="Filtrar por categoria ou porção">
+            <button type="button" class="filter-pill active" data-filter="all">Todos</button>
+            <button type="button" class="filter-pill" data-category="Receitas & Pratos Caseiros">🥘 Pratos Caseiros</button>
+            <button type="button" class="filter-pill" data-category="Receitas Fitness">⚡ Receitas Fit</button>
+            <button type="button" class="filter-pill" data-category="Lanches & Padaria">🥪 Lanches & Padaria</button>
+            <button type="button" class="filter-pill" data-category="Shakes & Bebidas Fitness">🥤 Shakes de Whey</button>
+            <button type="button" class="filter-pill" data-category="Sobremesas & Doces">🍰 Doces & Sobremesas</button>
+            <button type="button" class="filter-pill" data-category="Carnes e Aves">🥩 Carnes & Aves</button>
+            <button type="button" class="filter-pill" data-category="Cereais e Pães">🌾 Cereais & Pães</button>
+            <button type="button" class="filter-pill" data-category="Feijões e Leguminosas">🫘 Feijões</button>
+            <button type="button" class="filter-pill" data-category="Frutas">🍎 Frutas</button>
+            <button type="button" class="filter-pill" data-category="Ovos">🥚 Ovos</button>
+            <button type="button" class="filter-pill" data-category="Laticínios">🧀 Laticínios</button>
+            <button type="button" class="filter-pill" data-category="Peixes e Frutos do Mar">🐟 Peixes</button>
+            <button type="button" class="filter-pill" data-category="Suplementos">💊 Suplementos</button>
+          </div>
+        </div>
+
+        <!-- Food List Table / Cards -->
+        <div class="food-cards-grid" id="food-db-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- TAB 4: ÁGUA & LEMBRETES -->
+      <section id="tab-water" class="tab-panel" aria-labelledby="nav-tab-water">
+        <div class="panel-header">
+          <div>
+            <h2>Controle de Hidratação</h2>
+            <p class="subtitle">Acompanhe seu consumo diário e ative lembretes para não esquecer de beber água.</p>
+          </div>
+        </div>
+
+        <div class="water-full-layout">
+          <!-- Interactive Bottle / Meter -->
+          <div class="water-visual-card">
+            <div class="bottle-container">
+              <div class="bottle-cap"></div>
+              <div class="bottle-body">
+                <div id="bottle-water-fill" class="water-liquid" style="height: 0%">
+                  <div class="water-waves"></div>
+                </div>
+                <div class="bottle-text-overlay">
+                  <span id="bottle-water-amount" class="bottle-amount">0</span>
+                  <span class="bottle-unit">ml</span>
+                  <span id="bottle-water-pct" class="bottle-pct">0% da meta</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="water-action-buttons">
+              <button type="button" class="btn-water-action" data-amount="150">
+                <span class="action-icon">☕</span>
+                <span>+150 ml</span>
+                <small>Xícara</small>
+              </button>
+              <button type="button" class="btn-water-action" data-amount="250">
+                <span class="action-icon">🥛</span>
+                <span>+250 ml</span>
+                <small>Copo</small>
+              </button>
+              <button type="button" class="btn-water-action" data-amount="500">
+                <span class="action-icon">🍶</span>
+                <span>+500 ml</span>
+                <small>Garrafa</small>
+              </button>
+              <button type="button" class="btn-water-action" id="btn-custom-water">
+                <span class="action-icon">➕</span>
+                <span>Outro</span>
+                <small>Digitar ml</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Reminder Controls & History -->
+          <div class="water-sidebar">
+            <!-- Reminder Box -->
+            <div class="reminder-card">
+              <div class="reminder-header">
+                <div class="reminder-title-group">
+                  <span class="reminder-bell-icon">🔔</span>
+                  <div>
+                    <h3>Lembrete de Água</h3>
+                    <p class="text-muted">Notificação no navegador e alarme sonoro</p>
+                  </div>
+                </div>
+                <label class="switch" for="toggle-water-reminder">
+                  <input type="checkbox" id="toggle-water-reminder">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div id="reminder-options-box" class="reminder-options">
+                <div class="form-group">
+                  <label for="reminder-interval-select">Intervalo entre lembretes:</label>
+                  <select id="reminder-interval-select">
+                    <option value="15">A cada 15 minutos (Teste rápido)</option>
+                    <option value="30">A cada 30 minutos</option>
+                    <option value="45">A cada 45 minutos</option>
+                    <option value="60" selected>A cada 1 hora (Recomendado)</option>
+                    <option value="90">A cada 1h30</option>
+                    <option value="120">A cada 2 horas</option>
+                  </select>
+                </div>
+
+                <div class="reminder-countdown">
+                  <span>Próximo lembrete em:</span>
+                  <strong id="reminder-timer-display">--:--</strong>
+                </div>
+
+                <div class="reminder-test-buttons">
+                  <button type="button" id="btn-test-notification" class="btn btn-outline-cyan btn-sm">
+                    🔔 Testar Notificação e Som
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Today's Water Log History -->
+            <div class="water-history-card">
+              <div class="history-header">
+                <h3>Histórico de Hoje</h3>
+                <button type="button" id="btn-clear-water-day" class="btn-danger-text">Zerar Água</button>
+              </div>
+              <ul id="water-log-list" class="water-log-list">
+                <!-- Dynamic log entries -->
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: TREINOS & COMPÊNDIO OFICIAL -->
+      <section id="tab-workouts" class="tab-panel" aria-labelledby="nav-tab-workouts">
+        <div class="panel-header">
+          <div>
+            <h2>Treinos & Compêndio Oficial de Calorias</h2>
+            <p class="subtitle">Calcule o gasto energético real com base no <strong>Compêndio de Atividades Físicas (Ainsworth et al. / Stanford)</strong> e no seu peso corporal.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-open-add-workout">
+            + Novo Treino
+          </button>
+        </div>
+
+        <!-- Subnav Between Today's Logged Workouts and Compendium Explorer -->
+        <div class="tab-subnav">
+          <button type="button" class="subnav-btn active" id="btn-subnav-my-workouts">
+            📅 Treinos Registrados Hoje (<span id="today-workouts-count">0</span>)
+          </button>
+          <button type="button" class="subnav-btn" id="btn-subnav-compendium">
+            🏃 Explorar Compêndio de Exercícios (METs)
+          </button>
+        </div>
+
+        <!-- Subview 1: Today's Workouts List -->
+        <div id="subview-my-workouts" class="workout-content-area">
+          <div id="workout-sessions-list" class="workout-sessions-list">
+            <!-- Dynamic workout cards -->
+          </div>
+        </div>
+
+        <!-- Subview 2: Compendium Exercise Explorer -->
+        <div id="subview-compendium" class="workout-content-area" style="display: none;">
+          <aside class="official-source-banner">
+            <div class="source-banner-left">
+              <span class="source-icon">🏃</span>
+              <div>
+                <strong>Compêndio de Atividades Físicas — Adult Compendium 2024 (Ainsworth / Stanford)</strong>
+                <p>Equivalente Metabólico da Tarefa (MET): 1 MET = 1 kcal/kg/hora. As calorias queimadas são calculadas especificamente para o seu peso.</p>
+              </div>
+            </div>
+            <span class="source-stats-badge">Compêndio Ainsworth</span>
+          </aside>
+
+          <!-- Search & Category Filters for Exercises -->
+          <div class="search-filter-bar">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="search" id="exercise-search-input" placeholder="Buscar exercício (ex: musculação, corrida, spinning, jiu-jitsu, pular corda...)" autocomplete="off">
+            </div>
+            <div class="filter-pills" id="exercise-category-pills" role="radiogroup" aria-label="Filtrar exercícios por categoria">
+              <button type="button" class="filter-pill active" data-ex-cat="all">Todos</button>
+              <button type="button" class="filter-pill" data-ex-cat="Musculação & Força">🏋️ Musculação & Força</button>
+              <button type="button" class="filter-pill" data-ex-cat="Corrida & Pista">🏃 Corrida</button>
+              <button type="button" class="filter-pill" data-ex-cat="Caminhada & Esteira">🚶 Caminhada & Esteira</button>
+              <button type="button" class="filter-pill" data-ex-cat="Ciclismo">🚴 Ciclismo</button>
+              <button type="button" class="filter-pill" data-ex-cat="Lutas & Artes Marciais">🥋 Lutas</button>
+              <button type="button" class="filter-pill" data-ex-cat="Natação & Água">🏊 Natação</button>
+              <button type="button" class="filter-pill" data-ex-cat="Esportes & Raquete">⚽ Esportes</button>
+              <button type="button" class="filter-pill" data-ex-cat="Funcional & HIIT">⚡ Funcional / HIIT</button>
+              <button type="button" class="filter-pill" data-ex-cat="Mente & Alongamento">🧘 Yoga / Pilates</button>
+            </div>
+          </div>
+
+          <!-- Exercise Compendium Grid -->
+          <div class="exercise-catalog-grid" id="compendium-exercises-grid">
+            <!-- Dynamic cards rendered via JS -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile / Responsive) -->
+    <nav class="bottom-nav" aria-label="Navegação principal">
+      <button type="button" class="nav-tab-btn active" data-tab="tab-dashboard" id="nav-tab-dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Hoje</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="tab-meals" id="nav-tab-meals">
+        <span class="nav-icon">🥗</span>
+        <span class="nav-label">Refeições</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="tab-food-db" id="nav-tab-food-db">
+        <span class="nav-icon">📦</span>
+        <span class="nav-label">Alimentos</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="tab-water" id="nav-tab-water">
+        <span class="nav-icon">💧</span>
+        <span class="nav-label">Água</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="tab-workouts" id="nav-tab-workouts">
+        <span class="nav-icon">🏋️</span>
+        <span class="nav-label">Treinos</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ==================== MODAIS NATIVOS COM <dialog> ==================== -->
+
+  <!-- MODAL: REGISTRAR ALIMENTO EM UMA REFEIÇÃO -->
+  <dialog id="modal-log-meal" class="app-dialog" aria-labelledby="modal-log-meal-title" closedby="any">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 id="modal-log-meal-title">Registrar Alimento Consumido</h2>
+        <button type="button" class="btn-close-dialog" data-dialog="modal-log-meal" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="form-log-meal" class="dialog-form">
+        <!-- Meal Type Selector -->
+        <div class="form-group">
+          <label for="select-meal-type">Qual é a refeição?</label>
+          <select id="select-meal-type" name="mealType" required>
+            <option value="Café da Manhã">🌅 Café da Manhã</option>
+            <option value="Almoço" selected>🍲 Almoço</option>
+            <option value="Lanche da Tarde">🥪 Lanche da Tarde</option>
+            <option value="Jantar">🍽️ Jantar</option>
+            <option value="Ceia / Lanche Noturno">🌙 Ceia / Lanche</option>
+          </select>
+        </div>
+
+        <!-- Food Selector from Database -->
+        <div class="form-group">
+          <label for="search-food-input">Selecione o alimento do banco:</label>
+          <input type="text" id="search-food-input" placeholder="Digite para buscar no banco..." autocomplete="off">
+          <div id="food-autocomplete-results" class="autocomplete-list"></div>
+          <input type="hidden" id="selected-food-id" required>
+        </div>
+
+        <!-- Selected Food Details Preview -->
+        <div id="selected-food-badge" class="selected-food-badge hidden">
+          <div class="badge-title">
+            <strong id="preview-food-name">Peito de Frango</strong>
+            <span id="preview-food-base-info" class="text-muted">(Base: 159 kcal / 100g)</span>
+          </div>
+          <div class="badge-macros">
+            <span id="preview-base-p">Prot: 32g</span> • 
+            <span id="preview-base-c">Carb: 0g</span> • 
+            <span id="preview-base-f">Gord: 2.5g</span>
+          </div>
+        </div>
+
+        <!-- Unit Mode Selector (When Food has Unit Option, e.g. eggs, fruits, bread) -->
+        <div class="form-group" id="unit-mode-selector-group" style="display: none;">
+          <label>Como deseja informar a quantidade?</label>
+          <div class="radio-pill-group horizontal">
+            <label class="radio-card mini">
+              <input type="radio" name="mealUnitMode" value="g" checked>
+              <div class="radio-content">
+                <strong>Pesar em Gramas (g)</strong>
+                <small>Balança de cozinha</small>
+              </div>
+            </label>
+            <label class="radio-card mini">
+              <input type="radio" name="mealUnitMode" value="unidade">
+              <div class="radio-content">
+                <strong id="unit-mode-label-text">Por Unidade(s)</strong>
+                <small id="unit-mode-subtext">1, 2, 3 unidades...</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Quantity Input with Dynamic Unit -->
+        <div class="form-group">
+          <label for="input-meal-quantity">
+            Quantidade consumida: <span id="label-quantity-unit" class="highlight-unit">(g)</span>
+          </label>
+          <div class="quantity-input-row">
+            <input type="number" id="input-meal-quantity" min="0.1" max="5000" step="any" placeholder="Ex: 150" required>
+            <span id="badge-portion-type-indicator" class="input-suffix">g</span>
+          </div>
+          <p id="portion-hint" class="field-hint">Informe os gramas consumidos.</p>
+        </div>
+
+        <!-- Calculated Live Preview Card -->
+        <div class="calculated-preview-box">
+          <span class="calc-label">Total calculado para esta porção:</span>
+          <div class="calc-calories-row">
+            <span id="calc-live-calories" class="calc-calories-val">0</span>
+            <span class="calc-kcal-unit">kcal</span>
+          </div>
+          <div class="calc-macros-row">
+            <span>🥩 Prot: <strong id="calc-live-p">0</strong>g</span>
+            <span>🍞 Carb: <strong id="calc-live-c">0</strong>g</span>
+            <span>🥑 Gord: <strong id="calc-live-f">0</strong>g</span>
+            <span>🌾 Fibras: <strong id="calc-live-fib">0</strong>g</span>
+          </div>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-secondary" data-dialog="modal-log-meal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-log-meal">Salvar na Refeição</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: CADASTRAR NOVO ALIMENTO NO BANCO -->
+  <dialog id="modal-add-food" class="app-dialog" aria-labelledby="modal-add-food-title" closedby="any">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 id="modal-add-food-title">Cadastrar Novo Alimento no Banco</h2>
+        <button type="button" class="btn-close-dialog" data-dialog="modal-add-food" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="form-create-food" class="dialog-form">
+        <div class="form-group">
+          <label for="new-food-name">Nome do Alimento:</label>
+          <input type="text" id="new-food-name" placeholder="Ex: Patinho moído, Banana nanica, Iogurte grego" required>
+        </div>
+
+        <div class="form-group">
+          <label for="new-food-category">Categoria:</label>
+          <select id="new-food-category">
+            <option value="Proteínas">🥩 Proteínas / Carnes / Ovos</option>
+            <option value="Carboidratos">🥔 Carboidratos / Grãos</option>
+            <option value="Leguminosas">🫘 Feijões e Leguminosas</option>
+            <option value="Frutas">🍎 Frutas</option>
+            <option value="Laticínios">🧀 Laticínios e Derivados</option>
+            <option value="Bebidas">🥛 Líquidos / Bebidas</option>
+            <option value="Gorduras">🥑 Gorduras Boas / Castanhas</option>
+            <option value="Suplementos">💊 Suplementos</option>
+            <option value="Outros">🥗 Outros</option>
+          </select>
+        </div>
+
+        <!-- Portion Type Selector (Key Requirement) -->
+        <fieldset class="form-fieldset">
+          <legend>Como este alimento é medido como referência padrão?</legend>
+          <div class="radio-pill-group">
+            <label class="radio-card">
+              <input type="radio" name="newFoodPortionType" value="100g" checked>
+              <div class="radio-content">
+                <strong>Por 100 gramas (100g)</strong>
+                <small>Carnes, arroz, feijão, aveia, etc.</small>
+              </div>
+            </label>
+
+            <label class="radio-card">
+              <input type="radio" name="newFoodPortionType" value="100ml">
+              <div class="radio-content">
+                <strong>Por 100 mililitros (100ml)</strong>
+                <small>Leite, sucos, azeite, bebidas, etc.</small>
+              </div>
+            </label>
+
+            <label class="radio-card">
+              <input type="radio" name="newFoodPortionType" value="unidade">
+              <div class="radio-content">
+                <strong>Por 1 Unidade</strong>
+                <small>Ovos, banana, maçã, pão francês, etc.</small>
+              </div>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-group" id="unit-weight-group" style="display: none;">
+          <label for="new-food-unit-weight">Peso aproximado de 1 unidade em gramas (opcional):</label>
+          <input type="number" id="new-food-unit-weight" placeholder="Ex: 50 para 1 ovo, 70 para 1 banana" min="1">
+        </div>
+
+        <!-- Nutritional Reference Values -->
+        <div class="nutrition-inputs-grid">
+          <div class="form-group">
+            <label for="new-food-calories">Calorias (kcal) *</label>
+            <input type="number" id="new-food-calories" min="0" step="any" placeholder="0" required>
+            <span class="field-reference-hint">na porção base</span>
+          </div>
+
+          <div class="form-group">
+            <label for="new-food-protein">Proteína (g) *</label>
+            <input type="number" id="new-food-protein" min="0" step="any" placeholder="0" required>
+          </div>
+
+          <div class="form-group">
+            <label for="new-food-carbs">Carboidratos (g) *</label>
+            <input type="number" id="new-food-carbs" min="0" step="any" placeholder="0" required>
+          </div>
+
+          <div class="form-group">
+            <label for="new-food-fat">Gorduras (g) *</label>
+            <input type="number" id="new-food-fat" min="0" step="any" placeholder="0" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="new-food-notes">Observações ou Marca (opcional):</label>
+          <input type="text" id="new-food-notes" placeholder="Ex: Cozido sem óleo / Marca X">
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-secondary" data-dialog="modal-add-food">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar no Banco</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: REGISTRAR TREINO -->
+  <dialog id="modal-add-workout" class="app-dialog" aria-labelledby="modal-add-workout-title" closedby="any">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 id="modal-add-workout-title">Registrar Treino</h2>
+        <button type="button" class="btn-close-dialog" data-dialog="modal-add-workout" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="form-workout" class="dialog-form">
+        <!-- Compendium Activity Selection -->
+        <div class="form-group">
+          <label for="workout-compendium-select">Modalidade / Exercício do Compêndio Oficial:</label>
+          <select id="workout-compendium-select">
+            <option value="">-- Selecione uma atividade oficial (ou digite abaixo) --</option>
+            <optgroup label="Musculação & Força">
+              <option value="ex_musculacao_vigorosa" data-met="6.0" data-duration="50" selected>🏋️ Musculação Intensa / Hipertrofia (6.0 METs)</option>
+              <option value="ex_musculacao_moderada" data-met="3.5" data-duration="45">🏋️ Musculação Moderada (3.5 METs)</option>
+              <option value="ex_calistenia_vigorosa" data-met="8.0" data-duration="40">🤸 Calistenia Intensa / Barras e Paralelas (8.0 METs)</option>
+              <option value="ex_circuito_hiit" data-met="8.0" data-duration="30">⚡ Treino em Circuito / Funcional / HIIT (8.0 METs)</option>
+              <option value="ex_powerlifting" data-met="6.0" data-duration="60">🏋️ Powerlifting / Força Máxima (6.0 METs)</option>
+            </optgroup>
+            <optgroup label="Corrida & Esteira">
+              <option value="ex_corrida_trote_8km" data-met="8.3" data-duration="30">🏃 Corrida Leve / Trote 8 km/h (8.3 METs)</option>
+              <option value="ex_corrida_moderada_10km" data-met="9.8" data-duration="30">🏃 Corrida Moderada 10 km/h (9.8 METs)</option>
+              <option value="ex_corrida_rapida_12km" data-met="11.5" data-duration="30">🏃 Corrida Rápida 12 km/h (11.5 METs)</option>
+              <option value="ex_tiros_sprint" data-met="14.5" data-duration="20">⚡ Tiros de Velocidade / Sprints (14.5 METs)</option>
+              <option value="ex_caminhada_moderada_5km" data-met="3.5" data-duration="45">🚶 Caminhada Ritmo Firme 5 km/h (3.5 METs)</option>
+              <option value="ex_caminhada_rapida_6km" data-met="5.0" data-duration="40">🚶 Caminhada Rápida / Inclinada 6 km/h (5.0 METs)</option>
+              <option value="ex_escada_ergometrica" data-met="9.0" data-duration="20">🪜 Escada Ergométrica / Stepper (9.0 METs)</option>
+              <option value="ex_eliptico" data-met="5.0" data-duration="30">🔄 Elíptico / Transport (5.0 METs)</option>
+              <option value="ex_pular_corda" data-met="11.0" data-duration="20">🪢 Pular Corda (11.0 METs)</option>
+            </optgroup>
+            <optgroup label="Ciclismo & Natação">
+              <option value="ex_bike_ergometrica_moderada" data-met="6.8" data-duration="30">🚴 Bike Ergométrica Moderada (6.8 METs)</option>
+              <option value="ex_spinning_vigoroso" data-met="8.5" data-duration="45">🚴 Spinning / Ciclismo Intenso (8.5 METs)</option>
+              <option value="ex_ciclismo_rua_moderado" data-met="6.0" data-duration="60">🚴 Ciclismo ao Ar Livre 15-20 km/h (6.0 METs)</option>
+              <option value="ex_natacao_crawl_moderado" data-met="7.0" data-duration="45">🏊 Natação Crawl Moderado (7.0 METs)</option>
+              <option value="ex_natacao_crawl_vigoroso" data-met="9.8" data-duration="45">🏊 Natação Vigorosa (9.8 METs)</option>
+            </optgroup>
+            <optgroup label="Lutas & Esportes">
+              <option value="ex_jiujitsu" data-met="10.2" data-duration="60">🥋 Jiu-Jitsu / Judô / Luta (10.2 METs)</option>
+              <option value="ex_muay_thai_boxe" data-met="10.0" data-duration="60">🥊 Muay Thai / Kickboxing (10.0 METs)</option>
+              <option value="ex_boxe_saco" data-met="6.0" data-duration="30">🥊 Boxe no Saco de Pancadas (6.0 METs)</option>
+              <option value="ex_futebol_campo" data-met="7.5" data-duration="60">⚽ Futebol de Campo / Society (7.5 METs)</option>
+              <option value="ex_futsal" data-met="8.5" data-duration="50">⚽ Futsal / Salão (8.5 METs)</option>
+              <option value="ex_basquete" data-met="8.0" data-duration="60">🏀 Basquete (8.0 METs)</option>
+              <option value="ex_beach_tennis" data-met="7.3" data-duration="60">🎾 Beach Tennis (7.3 METs)</option>
+            </optgroup>
+            <optgroup label="Mente & Alongamento">
+              <option value="ex_pilates" data-met="3.5" data-duration="50">🧘 Pilates (3.5 METs)</option>
+              <option value="ex_yoga_hatha" data-met="3.0" data-duration="60">🧘 Yoga Tradicional (3.0 METs)</option>
+              <option value="ex_alongamento_estatico" data-met="2.5" data-duration="20">🤸 Alongamento & Mobilidade (2.5 METs)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="workout-title">Nome do Treino / Identificação:</label>
+          <input type="text" id="workout-title" placeholder="Ex: Treino A - Peito e Tríceps" value="Treino A - Peito e Tríceps" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="workout-duration">Duração (minutos):</label>
+            <input type="number" id="workout-duration" min="5" max="360" placeholder="Ex: 50" value="50" required>
+          </div>
+          <div class="form-group">
+            <label for="workout-calories-burned">Gasto Calórico Estimado (kcal):</label>
+            <input type="number" id="workout-calories-burned" min="0" placeholder="Auto calculado" value="375" required>
+          </div>
+        </div>
+
+        <!-- Live MET Burn Calculation Banner -->
+        <div class="workout-burn-calc-box">
+          <span class="calc-label">Cálculo Científico pelo Compêndio:</span>
+          <div>
+            <span id="workout-calc-kcal-display" class="workout-burn-calc-val">375</span>
+            <span class="calc-kcal-unit">kcal gastas</span>
+          </div>
+          <small id="workout-calc-formula-hint" style="color: var(--text-muted); font-size: 0.78rem;">
+            Fórmula: 6.0 METs × 75kg × (50 min / 60)
+          </small>
+        </div>
+
+        <!-- Exercises List in this workout -->
+        <div class="workout-exercises-section">
+          <div class="exercises-header">
+            <h4>Exercícios Realizados (Séries, Reps & Carga)</h4>
+            <button type="button" id="btn-add-exercise-row" class="btn btn-sm btn-outline-primary">+ Exercício</button>
+          </div>
+          <div id="exercises-dynamic-list" class="exercises-list-inputs">
+            <!-- Dynamic rows with exercise, sets, reps, load -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="workout-notes">Anotações / Sensação do treino:</label>
+          <textarea id="workout-notes" rows="2" placeholder="Ex: Consegui progredir carga no supino. Foco na execução."></textarea>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-secondary" data-dialog="modal-add-workout">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Treino</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: CONFIGURAÇÃO DE METAS & BACKUP -->
+  <dialog id="modal-settings" class="app-dialog" aria-labelledby="modal-settings-title" closedby="any">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 id="modal-settings-title">Suas Metas Diárias & Dados</h2>
+        <button type="button" class="btn-close-dialog" data-dialog="modal-settings" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="form-settings" class="dialog-form">
+        <h3>🎯 Metas Nutricionais Diárias</h3>
+        <div class="form-group">
+          <label for="settings-goal-calories">Meta Calórica Diária (kcal):</label>
+          <input type="number" id="settings-goal-calories" min="1000" max="6000" step="50" required>
+        </div>
+
+        <div class="nutrition-inputs-grid">
+          <div class="form-group">
+            <label for="settings-goal-protein">Meta Proteína (g):</label>
+            <input type="number" id="settings-goal-protein" min="10" max="400" required>
+          </div>
+          <div class="form-group">
+            <label for="settings-goal-carbs">Meta Carboidratos (g):</label>
+            <input type="number" id="settings-goal-carbs" min="10" max="600" required>
+          </div>
+          <div class="form-group">
+            <label for="settings-goal-fat">Meta Gorduras (g):</label>
+            <input type="number" id="settings-goal-fat" min="10" max="250" required>
+          </div>
+        </div>
+
+        <h3>💧 Meta de Hidratação</h3>
+        <div class="form-group">
+          <label for="settings-goal-water">Meta de Água por Dia (ml):</label>
+          <input type="number" id="settings-goal-water" min="1000" max="8000" step="100" required>
+        </div>
+
+        <hr class="divider">
+
+        <h3>⚖️ Perfil Corporal para Cálculo de Queima de Calorias</h3>
+        <div class="form-group">
+          <label for="settings-user-weight">Seu Peso Corporal (kg):</label>
+          <input type="number" id="settings-user-weight" min="30" max="250" step="0.5" value="75" required>
+          <span class="field-hint">Utilizado pela fórmula oficial do Compêndio (Ainsworth/Stanford): Calorias = MET × Peso (kg) × (Duração / 60).</span>
+        </div>
+
+        <hr class="divider">
+
+        <h3>💾 Backup e Gerenciamento</h3>
+        <div class="backup-actions">
+          <button type="button" id="btn-export-json" class="btn btn-outline-primary btn-sm">
+            📥 Exportar Todos os Dados (Backup JSON)
+          </button>
+          
+          <label for="import-file-input" class="btn btn-outline-cyan btn-sm file-label">
+            📤 Importar Backup JSON
+            <input type="file" id="import-file-input" accept=".json" style="display: none;">
+          </label>
+
+          <button type="button" id="btn-reset-data" class="btn btn-danger-text btn-sm">
+            ⚠️ Restaurar Dados de Fábrica
+          </button>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-secondary" data-dialog="modal-settings">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Metas</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: REGISTRO DE ÁGUA PERSONALIZADO -->
+  <dialog id="modal-custom-water" class="app-dialog" aria-labelledby="modal-custom-water-title" closedby="any">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 id="modal-custom-water-title">Registrar Quantidade de Água</h2>
+        <button type="button" class="btn-close-dialog" data-dialog="modal-custom-water" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="form-custom-water" class="dialog-form">
+        <div class="form-group">
+          <label for="custom-water-input">Quantos mililitros (ml) você bebeu?</label>
+          <input type="number" id="custom-water-input" min="10" max="3000" step="10" placeholder="Ex: 350" required autofocus>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-secondary" data-dialog="modal-custom-water">Cancelar</button>
+          <button type="submit" class="btn btn-cyan">Confirmar + Bebida</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: DETALHES DA RECEITA (INGREDIENTES & MACROS) -->
+  <dialog id="modal-recipe-details" class="app-dialog modal-recipe-dialog" aria-labelledby="modal-recipe-details-title" closedby="any">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <div>
+          <span class="badge-source-recipe" style="margin-bottom: 6px; display: inline-block;">🍳 Receita / Mistura de Alimentos</span>
+          <h2 id="modal-recipe-details-title">Detalhes da Receita</h2>
+          <span id="recipe-details-portion" class="recipe-portion-subtitle">1 porção média</span>
+        </div>
+        <button type="button" class="btn-close-dialog" data-dialog="modal-recipe-details" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="recipe-details-body">
+        <!-- Big Macro Cards Grid -->
+        <div class="recipe-macro-summary-grid">
+          <div class="recipe-macro-card card-cal">
+            <span class="macro-card-title">🔥 Calorias</span>
+            <strong id="recipe-modal-calories" class="macro-card-value">0</strong>
+            <small class="macro-card-unit">kcal</small>
+          </div>
+          <div class="recipe-macro-card card-protein">
+            <span class="macro-card-title">🥩 Proteínas</span>
+            <strong id="recipe-modal-protein" class="macro-card-value">0</strong>
+            <small class="macro-card-unit">g</small>
+          </div>
+          <div class="recipe-macro-card card-carbs">
+            <span class="macro-card-title">🍞 Carboidratos</span>
+            <strong id="recipe-modal-carbs" class="macro-card-value">0</strong>
+            <small class="macro-card-unit">g</small>
+          </div>
+          <div class="recipe-macro-card card-fat">
+            <span class="macro-card-title">🥑 Gorduras</span>
+            <strong id="recipe-modal-fat" class="macro-card-value">0</strong>
+            <small class="macro-card-unit">g</small>
+          </div>
+        </div>
+
+        <!-- Macro Ratio Distribution Bar -->
+        <div class="recipe-distribution-section">
+          <div class="distribution-header">
+            <span class="distribution-title">Distribuição Calórica:</span>
+            <div class="distribution-legend">
+              <span class="legend-item"><span class="legend-dot dot-protein"></span> <span id="pct-label-protein">Prot 0%</span></span>
+              <span class="legend-item"><span class="legend-dot dot-carbs"></span> <span id="pct-label-carbs">Carb 0%</span></span>
+              <span class="legend-item"><span class="legend-dot dot-fat"></span> <span id="pct-label-fat">Gord 0%</span></span>
+            </div>
+          </div>
+          <div class="macro-split-bar" role="progressbar" aria-label="Distribuição de macronutrientes">
+            <div id="split-bar-protein" class="split-segment segment-protein" style="width: 33%" title="Proteínas"></div>
+            <div id="split-bar-carbs" class="split-segment segment-carbs" style="width: 33%" title="Carboidratos"></div>
+            <div id="split-bar-fat" class="split-segment segment-fat" style="width: 34%" title="Gorduras"></div>
+          </div>
+        </div>
+
+        <!-- Recipe Preparation / Notes -->
+        <div id="recipe-modal-notes-box" class="recipe-notes-callout hidden">
+          <span class="notes-icon">📝</span>
+          <div>
+            <strong>Modo de Preparo / Detalhes:</strong>
+            <p id="recipe-modal-notes-text"></p>
+          </div>
+        </div>
+
+        <!-- Ingredients Table Breakdown -->
+        <div class="recipe-ingredients-section">
+          <div class="ingredients-header-row">
+            <h4>📋 Ingredientes da Receita</h4>
+            <span id="recipe-ingredients-count" class="badge-count">0 itens</span>
+          </div>
+
+          <div class="recipe-ingredients-table-wrapper">
+            <table class="recipe-ingredients-table">
+              <thead>
+                <tr>
+                  <th>Ingrediente</th>
+                  <th>Quantidade</th>
+                  <th style="text-align: right;">Calorias</th>
+                  <th style="text-align: right;">Macros (P / C / G)</th>
+                </tr>
+              </thead>
+              <tbody id="recipe-ingredients-tbody">
+                <!-- Injetado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" data-dialog="modal-recipe-details">Fechar</button>
+        <button type="button" class="btn btn-primary" id="btn-recipe-consume-action">🍽️ Consumir esta Receita</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Sound Audio Synthesizer Script + Main Application Script -->
+  <script type="module" src="app.js?v=2"></script>
+</body>
+</html>

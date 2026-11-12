@@ -1,0 +1,18 @@
+{
+  "name": "FitPulse - Nutrição & Ciência Fitness",
+  "short_name": "FitPulse",
+  "description": "Diário inteligente de macros, treinos, hidratação e ciência esportiva baseada em evidências.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101216",
+  "theme_color": "#101216",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
