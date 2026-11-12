@@ -1,13 +1,13 @@
-# ⚡ FitPulse - Diário Fitness & Nutrição Inteligente
+#  FitPulse - Diário Fitness & Nutrição Inteligente
 
 Protótipo pessoal de Web App para controle de nutrição, hidratação e treinos com cálculo automatizado de porções baseado na **Tabela TACO (NEPA/UNICAMP 4ª Edição)** e no **Compêndio Oficial de Atividades Físicas 2024 (Ainsworth et al. / Stanford)**, ampliado com **mais de 40 receitas e combinações caseiras do dia a dia**.
 
 ---
 
-## 🚀 Como Executar
+##  Como Executar
 
 O servidor local está ativo em:
-👉 **[http://localhost:3000](http://localhost:3000)**
+ **[http://localhost:3000](http://localhost:3000)**
 
 Para abrir diretamente:
 1. Acesse `http://localhost:3000` no seu navegador.
@@ -15,7 +15,7 @@ Para abrir diretamente:
 
 ---
 
-## 🍳 Novo Acervo de Receitas Prontas do Dia a Dia
+##  Novo Acervo de Receitas Prontas do Dia a Dia
 
 Além dos 601 alimentos laboratoriais da TACO/UNICAMP, o banco agora conta com **643 itens**, incluindo receitas prontas que as pessoas comem e preparam no dia a dia com cálculo preciso de porções:
 
