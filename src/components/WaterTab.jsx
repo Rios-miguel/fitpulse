@@ -8,90 +8,89 @@ import {
   BellOff, 
   Volume2, 
   Trash2, 
-  Sparkles 
+  Sparkles,
+  Sliders
 } from 'lucide-react';
 import { playWaterChime, playNotificationChime } from '../utils/audio.js';
+import {
+  getWaterReminderConfig,
+  saveWaterReminderConfig,
+  requestNotificationPermission,
+  triggerWaterNotification
+} from '../services/waterNotificationService.js';
 
 export default function WaterTab({
   dailyLog,
   settings,
   onAddWater,
   onRemoveWater,
-  onClearWater
+  onClearWater,
+  onOpenNotifications
 }) {
   const waterEntries = dailyLog.water || [];
   const totalWater = waterEntries.reduce((acc, w) => acc + (w.amount || 0), 0);
   const goalWater = settings.goalWater || 2500;
   const percent = Math.min(100, Math.round((totalWater / goalWater) * 100));
 
-  // Reminder state
-  const [reminderActive, setReminderActive] = useState(() => {
-    try {
-      const saved = localStorage.getItem('fitpulse_reminder_config_v1');
-      return saved ? JSON.parse(saved).active : false;
-    } catch (e) {
-      return false;
-    }
-  });
-
-  const [intervalMinutes, setIntervalMinutes] = useState(() => {
-    try {
-      const saved = localStorage.getItem('fitpulse_reminder_config_v1');
-      return saved ? JSON.parse(saved).intervalMinutes || 60 : 60;
-    } catch (e) {
-      return 60;
-    }
-  });
-
+  // Sync reminder state with waterNotificationService
+  const [reminderConfig, setReminderConfig] = useState(() => getWaterReminderConfig());
   const [timerDisplay, setTimerDisplay] = useState('--:--');
   const [customAmount, setCustomAmount] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(
-      'fitpulse_reminder_config_v1',
-      JSON.stringify({ active: reminderActive, intervalMinutes })
-    );
+    const handleConfigChange = (e) => {
+      if (e?.detail) setReminderConfig(e.detail);
+      else setReminderConfig(getWaterReminderConfig());
+    };
+    window.addEventListener('fitpulse_reminder_config_changed', handleConfigChange);
+    return () => window.removeEventListener('fitpulse_reminder_config_changed', handleConfigChange);
+  }, []);
 
-    if (!reminderActive) {
+  useEffect(() => {
+    if (!reminderConfig.enabled) {
       setTimerDisplay('--:--');
       return;
     }
 
-    let nextTimestamp = Date.now() + intervalMinutes * 60 * 1000;
+    const updateTimer = () => {
+      const intervalMs = (reminderConfig.intervalMinutes || 60) * 60 * 1000;
+      const last = reminderConfig.lastNotified || 0;
+      const targetTime = last > 0 ? last + intervalMs : Date.now() + intervalMs;
+      const diffMs = targetTime - Date.now();
 
-    const interval = setInterval(() => {
-      const remainingMs = nextTimestamp - Date.now();
-      if (remainingMs <= 0) {
-        // Trigger alert
-        playNotificationChime();
-        if ('Notification' in window && Notification.permission === 'granted') {
-          try {
-            new Notification('FitPulse - Hora de Beber Água! 💧', {
-              body: 'Mantenha-se hidratado e com energia para o seu dia.'
-            });
-          } catch (e) {}
-        }
-        nextTimestamp = Date.now() + intervalMinutes * 60 * 1000;
+      if (diffMs <= 0) {
+        setTimerDisplay('00:00');
+        return;
       }
 
-      const diffSec = Math.max(0, Math.floor(remainingMs / 1000));
+      const diffSec = Math.floor(diffMs / 1000);
       const m = Math.floor(diffSec / 60);
       const s = diffSec % 60;
       setTimerDisplay(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
-    }, 1000);
+    };
 
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [reminderActive, intervalMinutes]);
+  }, [reminderConfig]);
 
   const handleToggleReminder = async () => {
-    const nextState = !reminderActive;
-    if (nextState && 'Notification' in window && Notification.permission !== 'granted') {
-      try {
-        await Notification.requestPermission();
-      } catch (e) {}
+    const nextEnabled = !reminderConfig.enabled;
+    if (nextEnabled) {
+      await requestNotificationPermission();
     }
-    setReminderActive(nextState);
+    const updated = saveWaterReminderConfig({ enabled: nextEnabled, lastNotified: Date.now() });
+    setReminderConfig(updated);
+  };
+
+  const handleChangeInterval = (mins) => {
+    const updated = saveWaterReminderConfig({ intervalMinutes: mins, lastNotified: Date.now() });
+    setReminderConfig(updated);
+  };
+
+  const handleTestNotification = () => {
+    triggerWaterNotification({ force: true });
   };
 
   const handleCustomSubmit = (e) => {
@@ -205,7 +204,7 @@ export default function WaterTab({
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-zinc-100">Lembrete Automático</h3>
-                  <span className="text-[11px] text-zinc-400">Aviso no navegador e som</span>
+                  <span className="text-[11px] text-zinc-400">Som, vibração e aviso nativo</span>
                 </div>
               </div>
 
@@ -214,24 +213,25 @@ export default function WaterTab({
                 type="button"
                 onClick={handleToggleReminder}
                 className={`w-11 h-6 rounded-full transition-colors relative p-0.5 border ${
-                  reminderActive ? 'bg-cyan-500 border-cyan-400' : 'bg-zinc-800 border-zinc-700'
+                  reminderConfig.enabled ? 'bg-cyan-500 border-cyan-400' : 'bg-zinc-800 border-zinc-700'
                 }`}
+                title={reminderConfig.enabled ? 'Desativar lembretes' : 'Ativar lembretes'}
               >
                 <div
                   className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                    reminderActive ? 'translate-x-5' : 'translate-x-0'
+                    reminderConfig.enabled ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
-            {reminderActive && (
+            {reminderConfig.enabled && (
               <div className="space-y-3 pt-2 border-t border-white/[0.06]">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-400">Intervalo entre avisos:</span>
                   <select
-                    value={intervalMinutes}
-                    onChange={(e) => setIntervalMinutes(parseInt(e.target.value, 10))}
+                    value={reminderConfig.intervalMinutes || 60}
+                    onChange={(e) => handleChangeInterval(parseInt(e.target.value, 10))}
                     className="bg-[#131418] border border-white/[0.07] rounded-lg px-2.5 py-1 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
                   >
                     <option value="15">A cada 15 min (teste)</option>
@@ -250,14 +250,27 @@ export default function WaterTab({
                   </strong>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={playNotificationChime}
-                  className="w-full py-1.5 bg-[#131418] hover:bg-white/[0.06] text-zinc-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-white/[0.06] transition-colors"
-                >
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>Testar Alarme Sonoro</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestNotification}
+                    className="py-1.5 bg-[#131418] hover:bg-white/[0.06] text-zinc-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-white/[0.06] transition-colors"
+                  >
+                    <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Testar Alerta</span>
+                  </button>
+
+                  {typeof onOpenNotifications === 'function' && (
+                    <button
+                      type="button"
+                      onClick={onOpenNotifications}
+                      className="py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-cyan-500/20 transition-colors"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>Mais Opções</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

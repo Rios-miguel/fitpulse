@@ -15,10 +15,13 @@ import AddWorkoutModal from './components/AddWorkoutModal.jsx';
 import SettingsModal from './components/SettingsModal.jsx';
 import ArticleModal from './components/ArticleModal.jsx';
 import EvolutionModal from './components/EvolutionModal.jsx';
+import ProfileModal from './components/ProfileModal.jsx';
+import NotificationsModal from './components/NotificationsModal.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import { CheckCircle2 } from 'lucide-react';
 import { TACO_OFFICIAL_DATABASE } from './data/foodDb.js';
+import { checkAndTriggerReminder } from './services/waterNotificationService.js';
 
 const STORAGE_KEYS = {
   CUSTOM_FOODS: 'fitpulse_custom_foods_v1',
@@ -95,6 +98,8 @@ export default function App() {
   const [addWorkoutState, setAddWorkoutState] = useState({ open: false, exercise: null });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEvolutionOpen, setIsEvolutionOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
 
   // Bookmarked Articles
@@ -290,6 +295,109 @@ export default function App() {
     reader.readAsText(file);
   };
 
+  // Background timer para lembretes tradicionais de hidratação
+  useEffect(() => {
+    const timer = setInterval(() => {
+      checkAndTriggerReminder(showToast);
+    }, 25000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleApplyWorkoutToday = (routine) => {
+    if (!routine) return;
+    const exDuration = routine.durationMinutes || 50;
+    const userW = settings.userWeightKg || 75;
+    const met = 5.0;
+    const autoKcal = Math.round(met * userW * (exDuration / 60));
+
+    const totalVol = (routine.exercises || []).reduce(
+      (acc, ex) => acc + (ex.sets || 3) * (ex.reps || 10) * (ex.weight || 20),
+      0
+    );
+
+    const formattedExercises = (routine.exercises || []).map((ex, exIdx) => ({
+      id: 'ex_' + Date.now() + '_' + exIdx,
+      name: ex.name,
+      volumeKg: (ex.sets || 3) * (ex.reps || 10) * (ex.weight || 20),
+      sets: Array.from({ length: ex.sets || 3 }).map((_, sIdx) => ({
+        setNumber: sIdx + 1,
+        weight: ex.weight || 20,
+        reps: ex.reps || 10,
+        rpe: ex.rpe || 8.5,
+        completed: true
+      }))
+    }));
+
+    const newWorkout = {
+      id: 'workout_' + Date.now(),
+      title: routine.title,
+      exerciseId: 'ex_musculacao_vigorosa',
+      metValue: met,
+      durationMinutes: exDuration,
+      caloriesBurned: autoKcal,
+      totalVolumeKg: Math.round(totalVol),
+      totalSetsCount: (routine.exercises || []).reduce((acc, ex) => acc + (ex.sets || 3), 0),
+      notes: `Treino carregado do perfil: ${routine.title}`,
+      exercises: formattedExercises,
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setDailyLogs((prev) => {
+      const cur = prev[currentDate] || {};
+      const curWorkouts = cur.workouts || [];
+      const next = {
+        ...prev,
+        [currentDate]: {
+          ...cur,
+          workouts: [newWorkout, ...curWorkouts]
+        }
+      };
+      try {
+        localStorage.setItem(STORAGE_KEYS.DAILY_LOGS, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+    showToast(`Treino "${routine.title}" registrado no seu dia de hoje!`);
+  };
+
+  const handleApplyDietToday = (diet) => {
+    if (!diet || !Array.isArray(diet.meals)) return;
+    const newMealItems = diet.meals.map((m, idx) => ({
+      id: 'meal_item_' + Date.now() + '_' + idx,
+      mealType: m.mealType || 'Almoço',
+      foodId: 'diet_item_' + idx,
+      foodName: m.foodName,
+      portionType: 'unidade',
+      unitMode: 'unidade',
+      unitSuffix: m.unitSuffix || 'unid',
+      quantity: m.quantity || 1,
+      calories: m.calories || 0,
+      protein: m.protein || 0,
+      carbs: m.carbs || 0,
+      fat: m.fat || 0,
+      fiber: 0,
+      source: `Plano Salvo: ${diet.title}`,
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    }));
+
+    setDailyLogs((prev) => {
+      const cur = prev[currentDate] || {};
+      const curMeals = cur.meals || [];
+      const next = {
+        ...prev,
+        [currentDate]: {
+          ...cur,
+          meals: [...curMeals, ...newMealItems]
+        }
+      };
+      try {
+        localStorage.setItem(STORAGE_KEYS.DAILY_LOGS, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+    showToast(`Plano "${diet.title}" aplicado no seu diário de hoje!`);
+  };
+
   const handleResetFactory = () => {
     if (window.confirm('Tem certeza? Isso apagará os dados salvos neste navegador.')) {
       localStorage.clear();
@@ -306,13 +414,15 @@ export default function App() {
       <Header
         currentDate={currentDate}
         onDateChange={setCurrentDate}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenSearch={() => handleTabChange('foodDb')}
         onOpenEvolution={() => setIsEvolutionOpen(true)}
       />
 
-      {/* Main Container with smooth view animation */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6">
+      {/* Main Container with smooth view animation and mobile safe bottom padding */}
+      <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-5 pb-28 sm:pb-24">
         <div key={activeTab} className="tab-content-enter">
           <ErrorBoundary fallbackTitle="Erro ao carregar aba. Clique para restaurar.">
             {activeTab === 'dashboard' && (
@@ -360,6 +470,7 @@ export default function App() {
                 onAddWater={handleAddWater}
                 onRemoveWater={handleRemoveWater}
                 onClearWater={handleClearWater}
+                onOpenNotifications={() => setIsNotificationsOpen(true)}
               />
             )}
 
@@ -465,6 +576,27 @@ export default function App() {
             });
             showToast(`Peso atualizado para ${newW} kg!`);
           }}
+        />
+      )}
+
+      {/* Perfil do Usuário com Biometria, Metas e Treinos/Dietas Salvos */}
+      {isProfileOpen && (
+        <ProfileModal
+          currentSettings={settings}
+          onSaveSettings={setSettings}
+          onApplyWorkoutToday={handleApplyWorkoutToday}
+          onApplyDietToday={handleApplyDietToday}
+          onClose={() => setIsProfileOpen(false)}
+          onShowToast={showToast}
+        />
+      )}
+
+      {/* Sistema Tradicional de Notificações de Água */}
+      {isNotificationsOpen && (
+        <NotificationsModal
+          onClose={() => setIsNotificationsOpen(false)}
+          onShowToast={showToast}
+          dailyLog={currentDayLog}
         />
       )}
     </div>

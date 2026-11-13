@@ -1,7 +1,15 @@
 import React, { useRef } from 'react';
 import { Search, Calendar, Settings, Bell, ChevronLeft, ChevronRight, User, TrendingUp } from 'lucide-react';
 
-export default function Header({ currentDate, onDateChange, onOpenSettings, onOpenSearch, onOpenEvolution }) {
+export default function Header({ 
+  currentDate, 
+  onDateChange, 
+  onOpenProfile, 
+  onOpenNotifications, 
+  onOpenSettings, 
+  onOpenSearch, 
+  onOpenEvolution 
+}) {
   const dateInputRef = useRef(null);
 
   const formatDateDisplay = (dateStr) => {
@@ -38,30 +46,31 @@ export default function Header({ currentDate, onDateChange, onOpenSettings, onOp
   return (
     <header className="sticky top-0 z-40 bg-[#101216]/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-2.5">
       <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
-        {/* Left: Avatar & Notification Bell (YAZIO Style) */}
+        {/* Left: Avatar (Profile) & Notification Bell */}
         <div className="flex items-center gap-2">
-          {/* User Avatar */}
-          <div
-            onClick={onOpenSettings}
+          {/* User Avatar -> Opens User Profile */}
+          <button
+            type="button"
+            onClick={onOpenProfile}
             className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
-            title="Seu perfil / Metas"
+            title="Seu Perfil (Biometria, Treinos Salvos & Dietas)"
           >
             <div className="w-full h-full rounded-full bg-[#181a20] flex items-center justify-center overflow-hidden">
               <User className="w-5 h-5 text-emerald-400" />
             </div>
-          </div>
+          </button>
 
-          {/* Notification Bell with Badge 1 */}
+          {/* Notification Bell -> Opens Notifications & Water Reminders */}
           <div className="relative">
             <button
               type="button"
-              onClick={onOpenSettings}
-              className="w-9 h-9 rounded-full bg-[#181a20] hover:bg-[#20232b] border border-white/[0.08] flex items-center justify-center text-zinc-300 hover:text-white transition-colors"
-              title="Notificações & Lembretes"
+              onClick={onOpenNotifications}
+              className="w-9 h-9 rounded-full bg-[#181a20] hover:bg-[#20232b] border border-white/[0.08] flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              title="Lembretes de Água & Notificações"
             >
               <Bell className="w-4 h-4 text-zinc-300" />
             </button>
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-zinc-950 font-bold text-[10px] rounded-full flex items-center justify-center shadow-sm">
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-zinc-950 font-bold text-[10px] rounded-full flex items-center justify-center shadow-sm pointer-events-none">
               1
             </span>
           </div>
