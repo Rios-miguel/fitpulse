@@ -18,7 +18,10 @@ import {
   ArrowRight,
   Newspaper,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Activity,
+  Target,
+  Scale
 } from 'lucide-react';
 import { FITNESS_NEWS_ARTICLES } from '../data/fitnessNewsDb.js';
 
@@ -34,7 +37,8 @@ export default function DashboardTab({
   onSwitchTab,
   onRemoveMealItem,
   onOpenArticle,
-  onOpenEvolution
+  onOpenEvolution,
+  onOpenProfile
 }) {
   const [expandedSlots, setExpandedSlots] = useState({
     'Café da Manhã': true,
@@ -58,7 +62,44 @@ export default function DashboardTab({
   const totalBurned = Math.round(workouts.reduce((acc, w) => acc + (Number(w.caloriesBurned) || 0), 0));
 
   const goalCalories = Number(settings?.goalCalories) || 2000;
+  const goalProtein = Number(settings?.goalProtein) || 150;
+  const goalCarbs = Number(settings?.goalCarbs) || 200;
+  const goalFat = Number(settings?.goalFat) || 60;
+  const goalWater = Number(settings?.goalWater) || 2500;
+
   const idrPercent = Math.min(999, Math.round((totalCalories / goalCalories) * 100));
+  const remainingCalories = Math.max(0, goalCalories - totalCalories);
+
+  // Percentuais de progresso dos macros
+  const protPercent = Math.min(100, Math.round((totalProtein / (goalProtein || 1)) * 100));
+  const carbsPercent = Math.min(100, Math.round((totalCarbs / (goalCarbs || 1)) * 100));
+  const fatPercent = Math.min(100, Math.round((totalFat / (goalFat || 1)) * 100));
+
+  // Dados de gasto calórico / TDEE calculados do perfil
+  const profileData = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('fitpulse_user_profile_v1');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }, [settings]);
+
+  const estimatedTDEE = useMemo(() => {
+    if (profileData) {
+      const weight = parseFloat(profileData.weightKg) || 75;
+      const height = parseFloat(profileData.heightCm) || 178;
+      const age = parseInt(profileData.age, 10) || 26;
+      const isMale = profileData.gender === 'masculino';
+      let bmr = isMale
+        ? 10 * weight + 6.25 * height - 5 * age + 5
+        : 10 * weight + 6.25 * height - 5 * age - 161;
+      const multMap = { sedentario: 1.2, leve: 1.375, moderado: 1.55, intenso: 1.725, atleta: 1.9 };
+      const mult = multMap[profileData.activityLevel] || 1.55;
+      return Math.round(bmr * mult);
+    }
+    const w = Number(settings?.userWeightKg) || 75;
+    return Math.round((10 * w + 6.25 * 175 - 5 * 26 + 5) * 1.55);
+  }, [profileData, settings]);
 
   // Toggle expansão dos slots de refeição
   const toggleSlot = (slotKey) => {
@@ -291,42 +332,164 @@ export default function DashboardTab({
         </div>
       </section>
 
-      {/* 2. BARRA DE MACROS E CALORIAS EM 5 COLUNAS (Líp, Carb, Prot, IDR, Calorias) */}
-      <section className="bg-[#15171d] border border-white/[0.06] rounded-2xl p-4 shadow-sm">
+      {/* 1.5 BALANÇO ENERGÉTICO & GASTO DIÁRIO (WHOOP / MACROFACTOR STYLE) */}
+      <section className="bg-gradient-to-br from-[#181a20] via-[#15171d] to-[#121419] border border-white/[0.08] hover:border-emerald-500/30 rounded-2xl p-4 shadow-sm space-y-3 fitness-card">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400">
+              <Flame className="w-4 h-4 text-amber-400 animate-fire-glow" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+                <span>Gasto Diário & Balanço Energético</span>
+                <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Ao Vivo
+                </span>
+              </h3>
+              <p className="text-[10px] text-zinc-400">
+                Você queima ~{estimatedTDEE} kcal/dia • Meta de ingestão: {goalCalories} kcal
+              </p>
+            </div>
+          </div>
+
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="py-1 px-2.5 rounded-xl bg-white/[0.04] hover:bg-emerald-500/15 border border-white/[0.08] hover:border-emerald-500/30 text-zinc-300 hover:text-emerald-300 text-[11px] font-bold flex items-center gap-1 transition-all touch-bounce cursor-pointer shadow-xs"
+              title="Calcular ou alterar dados cadastrais de gasto e metas"
+            >
+              <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Meu Gasto</span>
+            </button>
+          )}
+        </div>
+
+        {/* 3 Métricas de Energia Lado a Lado */}
+        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+          {/* Queima Total (TDEE + Treino do dia) */}
+          <div className="p-2.5 rounded-xl bg-[#111317] border border-white/[0.04]">
+            <span className="text-[10px] text-zinc-400 block mb-0.5">Queima Diária</span>
+            <div className="flex items-baseline justify-center gap-1">
+              <strong className="text-sm sm:text-base font-black text-amber-400 font-mono">
+                {estimatedTDEE + totalBurned}
+              </strong>
+              <span className="text-[9px] text-zinc-500">kcal</span>
+            </div>
+            <span className="text-[9px] text-zinc-500 block">TDEE {totalBurned > 0 ? `+${totalBurned}ex` : ''}</span>
+          </div>
+
+          {/* Consumido */}
+          <div className="p-2.5 rounded-xl bg-[#111317] border border-white/[0.04]">
+            <span className="text-[10px] text-zinc-400 block mb-0.5">Consumido</span>
+            <div className="flex items-baseline justify-center gap-1">
+              <strong className="text-sm sm:text-base font-black text-zinc-100 font-mono">
+                {totalCalories}
+              </strong>
+              <span className="text-[9px] text-zinc-500">kcal</span>
+            </div>
+            <span className="text-[9px] text-zinc-500 block">de {goalCalories}</span>
+          </div>
+
+          {/* Restante para Meta */}
+          <div className={`p-2.5 rounded-xl border ${
+            remainingCalories === 0
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+              : 'bg-[#111317] border-emerald-500/20 text-emerald-300'
+          }`}>
+            <span className="text-[10px] text-zinc-400 block mb-0.5">Restante</span>
+            <div className="flex items-baseline justify-center gap-1">
+              <strong className="text-sm sm:text-base font-black font-mono">
+                {remainingCalories}
+              </strong>
+              <span className="text-[9px] text-zinc-500">kcal</span>
+            </div>
+            <span className="text-[9px] text-zinc-400 block">para atingir</span>
+          </div>
+        </div>
+
+        {/* Barra de Progresso de Calorias Suave */}
+        <div className="space-y-1 pt-0.5">
+          <div className="w-full bg-[#111317] h-2 rounded-full overflow-hidden border border-white/[0.04]">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400 transition-all duration-700 ease-out macro-shimmer"
+              style={{ width: `${Math.min(100, (totalCalories / (goalCalories || 1)) * 100)}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-zinc-400 px-0.5">
+            <span>0 kcal</span>
+            <span className="font-semibold text-zinc-300">{Math.round((totalCalories / (goalCalories || 1)) * 100)}% da meta</span>
+            <span>{goalCalories} kcal</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. BARRA DE MACROS E CALORIAS EM 5 COLUNAS COM MEDIDORES SUAVES */}
+      <section className="bg-[#15171d] border border-white/[0.06] rounded-2xl p-4 shadow-sm fitness-card">
         <div className="grid grid-cols-5 text-center divide-x divide-white/[0.05]">
           {/* Líp (Gorduras) */}
-          <div className="px-1">
-            <span className="block text-[11px] font-semibold text-zinc-400 mb-1">Líp</span>
+          <div className="px-1.5 space-y-1.5">
+            <span className="block text-[11px] font-semibold text-rose-400">Líp</span>
             <span className="text-sm sm:text-base font-bold text-zinc-100">{totalFat}</span>
-            <span className="block text-[10px] text-zinc-500">g</span>
+            <span className="block text-[10px] text-zinc-500">/ {goalFat}g</span>
+            <div className="w-full bg-[#111317] h-1.5 rounded-full overflow-hidden mt-1">
+              <div
+                className="bg-rose-400 h-full rounded-full transition-all duration-500 macro-shimmer"
+                style={{ width: `${fatPercent}%` }}
+              />
+            </div>
           </div>
 
           {/* Carb (Carboidratos) */}
-          <div className="px-1">
-            <span className="block text-[11px] font-semibold text-zinc-400 mb-1">Carb</span>
+          <div className="px-1.5 space-y-1.5">
+            <span className="block text-[11px] font-semibold text-amber-400">Carb</span>
             <span className="text-sm sm:text-base font-bold text-zinc-100">{totalCarbs}</span>
-            <span className="block text-[10px] text-zinc-500">g</span>
+            <span className="block text-[10px] text-zinc-500">/ {goalCarbs}g</span>
+            <div className="w-full bg-[#111317] h-1.5 rounded-full overflow-hidden mt-1">
+              <div
+                className="bg-amber-400 h-full rounded-full transition-all duration-500 macro-shimmer"
+                style={{ width: `${carbsPercent}%` }}
+              />
+            </div>
           </div>
 
           {/* Prot (Proteínas) */}
-          <div className="px-1">
-            <span className="block text-[11px] font-semibold text-zinc-400 mb-1">Prot</span>
+          <div className="px-1.5 space-y-1.5">
+            <span className="block text-[11px] font-semibold text-emerald-400">Prot</span>
             <span className="text-sm sm:text-base font-bold text-zinc-100">{totalProtein}</span>
-            <span className="block text-[10px] text-zinc-500">g</span>
+            <span className="block text-[10px] text-zinc-500">/ {goalProtein}g</span>
+            <div className="w-full bg-[#111317] h-1.5 rounded-full overflow-hidden mt-1">
+              <div
+                className="bg-emerald-400 h-full rounded-full transition-all duration-500 macro-shimmer"
+                style={{ width: `${protPercent}%` }}
+              />
+            </div>
           </div>
 
           {/* IDR (% da meta diária) */}
-          <div className="px-1">
-            <span className="block text-[11px] font-semibold text-zinc-400 mb-1">IDR</span>
-            <span className="text-sm sm:text-base font-bold text-emerald-400">{idrPercent}%</span>
-            <span className="block text-[10px] text-zinc-500">meta</span>
+          <div className="px-1.5 space-y-1.5">
+            <span className="block text-[11px] font-semibold text-teal-400">IDR</span>
+            <span className="text-sm sm:text-base font-extrabold text-emerald-400">{idrPercent}%</span>
+            <span className="block text-[10px] text-zinc-500">concluído</span>
+            <div className="w-full bg-[#111317] h-1.5 rounded-full overflow-hidden mt-1">
+              <div
+                className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, idrPercent)}%` }}
+              />
+            </div>
           </div>
 
           {/* Calorias Totais */}
-          <div className="px-1">
-            <span className="block text-[11px] font-semibold text-zinc-400 mb-1">Calorias</span>
+          <div className="px-1.5 space-y-1.5">
+            <span className="block text-[11px] font-semibold text-zinc-300">Calorias</span>
             <span className="text-base sm:text-lg font-black text-zinc-100 tracking-tight">{totalCalories}</span>
             <span className="block text-[10px] text-zinc-500">/ {goalCalories}</span>
+            <div className="w-full bg-[#111317] h-1.5 rounded-full overflow-hidden mt-1">
+              <div
+                className="bg-gradient-to-r from-emerald-400 to-amber-400 h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, idrPercent)}%` }}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -340,7 +503,7 @@ export default function DashboardTab({
           return (
             <article
               key={slot.key}
-              className="bg-[#15171d] border border-white/[0.06] rounded-2xl overflow-hidden shadow-sm transition-all duration-200"
+              className="bg-[#15171d] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl overflow-hidden shadow-sm transition-all duration-200 fitness-card"
             >
               {/* Linha Principal do Card: Ícone + Título + Calorias + Botão '+' Verde */}
               <div className="p-3.5 flex items-center justify-between gap-3">
@@ -362,7 +525,7 @@ export default function DashboardTab({
                     type="button"
                     onClick={() => onOpenLogMeal(null, slot.key)}
                     aria-label={`Adicionar alimento em ${slot.title}`}
-                    className="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-zinc-950 flex items-center justify-center shadow-xs transition-transform cursor-pointer"
+                    className="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-90 text-zinc-950 flex items-center justify-center shadow-xs transition-transform cursor-pointer touch-bounce"
                   >
                     <Plus className="w-5 h-5 stroke-[2.5]" />
                   </button>
@@ -449,7 +612,7 @@ export default function DashboardTab({
       {/* 4. CARDS DE SUPORTE: HIDRATAÇÃO E ATIVIDADES */}
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
         {/* Hidratação Rápida */}
-        <article className="bg-[#15171d] border border-white/[0.06] rounded-2xl p-3.5 shadow-sm">
+        <article className="bg-[#15171d] border border-white/[0.06] hover:border-cyan-500/25 rounded-2xl p-3.5 shadow-sm fitness-card">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400">
@@ -464,7 +627,7 @@ export default function DashboardTab({
 
           <div className="w-full bg-[#111317] h-1.5 rounded-full overflow-hidden mb-3">
             <div
-              className="bg-cyan-400 h-full rounded-full transition-all duration-300"
+              className="bg-cyan-400 h-full rounded-full transition-all duration-500 macro-shimmer"
               style={{
                 width: `${Math.min(100, Math.round((totalWater / (settings?.goalWater || 2500)) * 100))}%`
               }}
@@ -475,14 +638,14 @@ export default function DashboardTab({
             <button
               type="button"
               onClick={() => onQuickAddWater(250)}
-              className="flex-1 py-1 px-2 rounded-lg bg-[#191c23] hover:bg-white/[0.06] border border-white/[0.05] text-[11px] font-semibold text-zinc-200 transition-colors cursor-pointer"
+              className="flex-1 py-1 px-2 rounded-lg bg-[#191c23] hover:bg-white/[0.06] active:scale-95 border border-white/[0.05] text-[11px] font-semibold text-zinc-200 transition-all cursor-pointer touch-bounce"
             >
               +250 ml
             </button>
             <button
               type="button"
               onClick={() => onQuickAddWater(500)}
-              className="flex-1 py-1 px-2 rounded-lg bg-[#191c23] hover:bg-white/[0.06] border border-white/[0.05] text-[11px] font-semibold text-zinc-200 transition-colors cursor-pointer"
+              className="flex-1 py-1 px-2 rounded-lg bg-[#191c23] hover:bg-white/[0.06] active:scale-95 border border-white/[0.05] text-[11px] font-semibold text-zinc-200 transition-all cursor-pointer touch-bounce"
             >
               +500 ml
             </button>
@@ -498,7 +661,7 @@ export default function DashboardTab({
         </article>
 
         {/* Atividade & Queima */}
-        <article className="bg-[#15171d] border border-white/[0.06] rounded-2xl p-3.5 shadow-sm">
+        <article className="bg-[#15171d] border border-white/[0.06] hover:border-purple-500/25 rounded-2xl p-3.5 shadow-sm fitness-card">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">

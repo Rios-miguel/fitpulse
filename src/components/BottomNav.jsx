@@ -41,6 +41,9 @@ export default function BottomNav({ activeTab, onTabChange }) {
               <span className={`text-[10px] sm:text-[11px] tracking-tight ${isActive ? 'text-emerald-400 font-extrabold' : 'text-zinc-400 font-medium'}`}>
                 {tab.label}
               </span>
+              {isActive && (
+                <div className="w-1 h-1 rounded-full bg-emerald-400 -mt-0.5" />
+              )}
             </button>
           );
         })}

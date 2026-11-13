@@ -439,6 +439,7 @@ export default function App() {
                 onRemoveMealItem={handleRemoveMealItem}
                 onOpenArticle={(art) => setSelectedArticle(art)}
                 onOpenEvolution={() => setIsEvolutionOpen(true)}
+                onOpenProfile={() => setIsProfileOpen(true)}
               />
             )}
 

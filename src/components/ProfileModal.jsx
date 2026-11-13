@@ -31,7 +31,7 @@ const SAVED_DIETS_KEY = 'fitpulse_saved_diet_plans_v1';
 
 // Dados Padrão de Perfil
 export const DEFAULT_PROFILE = {
-  name: 'Miguel Rios',
+  name: '',
   gender: 'masculino', // 'masculino' | 'feminino'
   age: 26,
   heightCm: 178,
@@ -189,13 +189,21 @@ export default function ProfileModal({
     };
     const mult = multMap[profile.activityLevel] || 1.55;
     const tdee = Math.round(bmr * mult);
+    const activityBurned = Math.max(0, tdee - bmr);
 
     // Ajuste pelo Objetivo
     let targetCalories = tdee;
+    let goalDescription = 'Equilíbrio calórico para recomposição corporal e troca de gordura por massa magra.';
+    let deltaCalories = 0;
+
     if (profile.goal === 'cutting') {
-      targetCalories = Math.round(tdee - 450); // Déficit moderado sustentável
+      targetCalories = Math.max(1200, Math.round(tdee - 450)); // Déficit moderado sustentável
+      deltaCalories = -450;
+      goalDescription = 'Déficit de -450 kcal para queima contínua de gordura com máxima retenção muscular.';
     } else if (profile.goal === 'bulking') {
       targetCalories = Math.round(tdee + 350); // Superávit limpo
+      deltaCalories = +350;
+      goalDescription = 'Superávit limpo de +350 kcal para otimizar síntese de proteínas e ganho de força.';
     }
 
     // Macros Recomendados
@@ -205,35 +213,64 @@ export default function ProfileModal({
     const fatCals = fatGrams * 9;
     const remainingCals = Math.max(200, targetCalories - (proteinCals + fatCals));
     const carbsGrams = Math.round(remainingCals / 4);
+    const carbsCals = carbsGrams * 4;
 
-    // Água Recomendada (35ml/kg)
-    const waterMl = Math.round((weight * 35) / 100) * 100;
+    const totalMacroCals = proteinCals + fatCals + carbsCals || 1;
+    const proteinPct = Math.round((proteinCals / totalMacroCals) * 100);
+    const fatPct = Math.round((fatCals / totalMacroCals) * 100);
+    const carbsPct = Math.round((carbsCals / totalMacroCals) * 100);
+
+    // Água Recomendada (35ml a 40ml por kg)
+    const waterFactor = (profile.activityLevel === 'intenso' || profile.activityLevel === 'atleta') ? 40 : 35;
+    const waterMl = Math.round((weight * waterFactor) / 100) * 100;
+    const waterGlasses = Math.round(waterMl / 250);
+    const waterBottles = Number((waterMl / 500).toFixed(1));
 
     // IMC
     const heightM = height / 100;
     const bmi = Number((weight / (heightM * heightM)).toFixed(1));
+    let bmiCategory = 'Peso Normal';
+    if (bmi < 18.5) bmiCategory = 'Abaixo do peso';
+    else if (bmi >= 25 && bmi < 29.9) bmiCategory = 'Sobrepeso leve';
+    else if (bmi >= 30) bmiCategory = 'Obesidade';
 
     return {
       bmr,
       tdee,
+      activityBurned,
       targetCalories,
+      deltaCalories,
+      goalDescription,
       proteinGrams,
+      proteinCals,
+      proteinPct,
       carbsGrams,
+      carbsCals,
+      carbsPct,
       fatGrams,
+      fatCals,
+      fatPct,
       waterMl,
-      bmi
+      waterGlasses,
+      waterBottles,
+      bmi,
+      bmiCategory
     };
   }, [profile]);
 
   const handleSaveProfile = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     try {
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-      if (onShowToast) onShowToast('Perfil e biometria salvos com sucesso!');
+      if (onShowToast) onShowToast('Dados de perfil e biometria salvos!');
     } catch (e) {}
   };
 
   const handleApplyCalculatedGoals = () => {
+    try {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    } catch (e) {}
+
     if (onSaveSettings) {
       onSaveSettings({
         goalCalories: calculations.targetCalories,
@@ -244,7 +281,7 @@ export default function ProfileModal({
         userWeightKg: profile.weightKg
       });
       if (onShowToast) {
-        onShowToast(`Metas atualizadas: ${calculations.targetCalories} kcal e ${calculations.proteinGrams}g proteína!`);
+        onShowToast(`Metas sincronizadas! Queima: ${calculations.tdee} kcal • Comer: ${calculations.targetCalories} kcal • Água: ${calculations.waterMl} ml`);
       }
     }
   };
@@ -396,6 +433,7 @@ export default function ProfileModal({
                     <label className="text-[10px] text-zinc-400 font-semibold block mb-1">Seu Nome / Apelido:</label>
                     <input
                       type="text"
+                      placeholder="Ex: Seu Nome ou Apelido"
                       value={profile.name}
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                       className="w-full bg-[#181a20] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-100 font-bold focus:outline-none focus:border-emerald-500/50"
@@ -545,71 +583,217 @@ export default function ProfileModal({
                 </div>
               </div>
 
-              {/* Automatic Calculated Results Card */}
-              <div className="bg-gradient-to-br from-emerald-950/30 to-[#131418] border border-emerald-500/25 rounded-2xl p-4 space-y-3 shadow-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-bold text-emerald-300">
-                      Cálculo Científico Personalizado
+              {/* Automatic Calculated Results Cards (Whoop / MacroFactor / YAZIO Style) */}
+              <div className="space-y-3 pt-1">
+                {/* 1. SEÇÃO: QUANTAS CALORIAS QUEIMA POR DIA */}
+                <div className="bg-gradient-to-br from-amber-950/25 via-[#181a20] to-[#131418] border border-amber-500/25 rounded-2xl p-4 space-y-3 shadow-md fitness-card">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                        <Flame className="w-4 h-4 fill-amber-400 text-amber-400 animate-fire-glow" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-zinc-100 block">
+                          Gasto Calórico Diário (Queima Estimada)
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          Total que seu corpo gasta a cada 24 horas
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      Mifflin-St Jeor
                     </span>
                   </div>
-                  <span className="text-[10px] text-zinc-400">Fórmula Mifflin-St Jeor</span>
+
+                  {/* Número de Queima em Destaque */}
+                  <div className="p-3 bg-[#131418]/90 rounded-xl border border-white/[0.05] flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-zinc-400 font-medium block">Você queima aproximadamente:</span>
+                      <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
+                          {calculations.tdee}
+                        </span>
+                        <span className="text-xs font-bold text-zinc-300 uppercase">kcal / dia</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right border-l border-white/[0.06] pl-3">
+                      <span className="text-[10px] text-zinc-400 block">Gasto em Repouso (TMB):</span>
+                      <strong className="text-xs font-bold text-zinc-200 block">{calculations.bmr} kcal</strong>
+                      <span className="text-[10px] text-zinc-400 block mt-1">Gasto em Atividades:</span>
+                      <strong className="text-xs font-bold text-amber-400">+{calculations.activityBurned} kcal</strong>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    💡 Seu corpo gasta <strong className="text-zinc-200">{calculations.bmr} kcal</strong> apenas para manter funções vitais (coração, cérebro, respiração). Com suas atividades e treinos, seu gasto diário real atinge <strong className="text-amber-300">~{calculations.tdee} kcal</strong>.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-[#181a20]/80 p-2 rounded-xl border border-white/[0.05]">
-                    <span className="text-[10px] text-zinc-400 block">Taxa Basal (TMB):</span>
-                    <strong className="text-sm font-extrabold text-zinc-100">{calculations.bmr} kcal</strong>
+                {/* 2. SEÇÃO: QUANTO DEVE COMER (CALORIAS & MACROS) */}
+                <div className="bg-gradient-to-br from-emerald-950/25 via-[#181a20] to-[#131418] border border-emerald-500/25 rounded-2xl p-4 space-y-3.5 shadow-md fitness-card">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <Target className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-zinc-100 block">
+                          Quanto Você Deve Comer
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          Meta nutricional adaptada ao seu objetivo
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {profile.goal === 'cutting' ? 'Déficit (-450 kcal)' : profile.goal === 'bulking' ? 'Superávit (+350 kcal)' : 'Manutenção'}
+                    </span>
                   </div>
-                  <div className="bg-[#181a20]/80 p-2 rounded-xl border border-white/[0.05]">
-                    <span className="text-[10px] text-zinc-400 block">Gasto Total (TDEE):</span>
-                    <strong className="text-sm font-extrabold text-zinc-100">{calculations.tdee} kcal</strong>
+
+                  {/* Ingestão Diária Recomendada */}
+                  <div className="p-3 bg-[#131418]/90 rounded-xl border border-emerald-500/20 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-zinc-400 font-medium block">Sua meta calórica ideal:</span>
+                      <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight">
+                          {calculations.targetCalories}
+                        </span>
+                        <span className="text-xs font-bold text-zinc-300 uppercase">kcal / dia</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right text-[11px] text-zinc-400 max-w-[160px]">
+                      {calculations.goalDescription}
+                    </div>
                   </div>
-                  <div className="bg-[#181a20]/80 p-2 rounded-xl border border-emerald-500/30">
-                    <span className="text-[10px] text-emerald-400 font-semibold block">Meta Ideal:</span>
-                    <strong className="text-sm font-extrabold text-emerald-300">{calculations.targetCalories} kcal</strong>
+
+                  {/* Barras de Macronutrientes com Porcentagens e Gramas */}
+                  <div className="space-y-2.5 pt-1">
+                    <span className="text-[11px] font-bold text-zinc-300 block">Distribuição de Macros Recomendada:</span>
+
+                    {/* Proteína */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          <span className="text-zinc-200 font-semibold">Proteína (2,0g/kg)</span>
+                        </div>
+                        <span className="font-mono text-zinc-300 font-bold">
+                          {calculations.proteinGrams}g <span className="text-zinc-500 text-[10px]">({calculations.proteinPct}%)</span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-[#131418] h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-emerald-400 h-full rounded-full transition-all duration-700 macro-shimmer"
+                          style={{ width: `${Math.min(100, calculations.proteinPct * 2)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Carboidrato */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-400" />
+                          <span className="text-zinc-200 font-semibold">Carboidratos (Energia)</span>
+                        </div>
+                        <span className="font-mono text-zinc-300 font-bold">
+                          {calculations.carbsGrams}g <span className="text-zinc-500 text-[10px]">({calculations.carbsPct}%)</span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-[#131418] h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-amber-400 h-full rounded-full transition-all duration-700 macro-shimmer"
+                          style={{ width: `${Math.min(100, calculations.carbsPct * 1.8)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Gordura */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-400" />
+                          <span className="text-zinc-200 font-semibold">Gorduras Boas (0,8g/kg)</span>
+                        </div>
+                        <span className="font-mono text-zinc-300 font-bold">
+                          {calculations.fatGrams}g <span className="text-zinc-500 text-[10px]">({calculations.fatPct}%)</span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-[#131418] h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-rose-400 h-full rounded-full transition-all duration-700 macro-shimmer"
+                          style={{ width: `${Math.min(100, calculations.fatPct * 2)}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Recommended Macros */}
-                <div className="grid grid-cols-4 gap-1.5 pt-1 text-center text-xs">
-                  <div className="bg-[#181a20] p-1.5 rounded-lg border border-sky-500/20">
-                    <span className="text-[9px] text-sky-400 font-bold block">Proteína</span>
-                    <strong className="text-xs text-zinc-100">{calculations.proteinGrams}g</strong>
+                {/* 3. SEÇÃO: QUANTO DEVE BEBER DE ÁGUA */}
+                <div className="bg-gradient-to-br from-cyan-950/25 via-[#181a20] to-[#131418] border border-cyan-500/25 rounded-2xl p-4 space-y-3 shadow-md fitness-card">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                        <Droplets className="w-4 h-4 text-cyan-400" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-zinc-100 block">
+                          Quanto Você Deve Beber de Água
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          Hidratação celular & taxa metabólica
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      35-40 ml/kg
+                    </span>
                   </div>
-                  <div className="bg-[#181a20] p-1.5 rounded-lg border border-amber-500/20">
-                    <span className="text-[9px] text-amber-400 font-bold block">Carboidrato</span>
-                    <strong className="text-xs text-zinc-100">{calculations.carbsGrams}g</strong>
+
+                  <div className="p-3 bg-[#131418]/90 rounded-xl border border-cyan-500/20 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-zinc-400 font-medium block">Sua meta diária de água:</span>
+                      <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <span className="text-2xl sm:text-3xl font-black text-cyan-400 font-mono tracking-tight">
+                          {calculations.waterMl}
+                        </span>
+                        <span className="text-xs font-bold text-zinc-300 uppercase">ml / dia</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right border-l border-white/[0.06] pl-3">
+                      <span className="text-[10px] text-zinc-400 block">Equivale na prática:</span>
+                      <strong className="text-xs font-bold text-cyan-300 block">~{calculations.waterGlasses} copos de 250ml</strong>
+                      <span className="text-[10px] text-zinc-500 block">ou ~{calculations.waterBottles} garrafas de 500ml</span>
+                    </div>
                   </div>
-                  <div className="bg-[#181a20] p-1.5 rounded-lg border border-rose-500/20">
-                    <span className="text-[9px] text-rose-400 font-bold block">Gordura</span>
-                    <strong className="text-xs text-zinc-100">{calculations.fatGrams}g</strong>
-                  </div>
-                  <div className="bg-[#181a20] p-1.5 rounded-lg border border-cyan-500/20">
-                    <span className="text-[9px] text-cyan-400 font-bold block">Água</span>
-                    <strong className="text-xs text-zinc-100">{calculations.waterMl}ml</strong>
-                  </div>
+
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    💧 Ingerir a quantidade certa de água previne a fadiga muscular, potencializa a absorção dos nutrientes e acelera seu metabolismo em repouso.
+                  </p>
                 </div>
 
-                {/* Button to Apply Goals Directly to App Settings */}
+                {/* BOTÃO HEROICO DE 1 CLIQUE: SINCRONIZAR TUDO NO APP */}
                 <button
                   type="button"
                   onClick={handleApplyCalculatedGoals}
-                  className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                  className="w-full py-3 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:opacity-95 text-zinc-950 font-black rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all cursor-pointer touch-bounce"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Aplicar Estas Metas Automaticamente no Meu FitPulse</span>
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                  <span>Aplicar e Sincronizar Tudo no Meu FitPulse</span>
                 </button>
               </div>
 
-              {/* Save Profile Button */}
+              {/* Botão Secundário de Salvar Apenas Perfil */}
               <div className="flex justify-end pt-1">
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#181a20] hover:bg-white/[0.06] border border-white/[0.08] text-zinc-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-4 py-2 bg-[#181a20] hover:bg-white/[0.06] border border-white/[0.08] text-zinc-300 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <Save className="w-4 h-4 text-emerald-400" />
+                  <Save className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Salvar Dados de Perfil</span>
                 </button>
               </div>
